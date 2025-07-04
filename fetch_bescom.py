@@ -1,11 +1,11 @@
 import json
 import subprocess
 
-query = 'from:bescomofficial'
-cmd = ['snscrape', '--jsonl', '--max-results', '10', f'twitter-search {query}']
+username = 'bescomofficial'
+cmd = ['snscrape', '--jsonl', '--max-results', '10', 'twitter-user', username]
 result = subprocess.run(cmd, capture_output=True, text=True)
 
-# 🔍 Check if scraping failed
+# Check if snscrape ran successfully
 if result.returncode != 0:
     print("snscrape failed:", result.stderr)
     exit(1)
@@ -14,7 +14,7 @@ lines = result.stdout.strip().split('\n')
 tweets = []
 
 for line in lines:
-    if not line.strip():  # skip empty lines
+    if not line.strip():
         continue
     try:
         tweet = json.loads(line)
