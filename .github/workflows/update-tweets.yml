@@ -1,0 +1,34 @@
+name: Update Tweets
+
+on:
+  schedule:
+    - cron: "*/15 * * * *"  # Every 15 mins
+  workflow_dispatch:
+
+jobs:
+  scrape:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+
+      - name: Install snscrape
+        run: pip install snscrape
+
+      - name: Run scraper
+        run: python fetch_bescom.py
+
+      - name: Commit and push if changed
+        run: |
+          git config user.name "bescom-bot"
+          git config user.email "bescom-bot@users.noreply.github.com"
+          git add tweets.json
+          git diff --cached --quiet || git commit -m "Update tweets"
+          git push
+
+Add GitHub Action to auto-fetch tweets
