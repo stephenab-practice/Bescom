@@ -2,30 +2,60 @@ import json
 import requests
 from bs4 import BeautifulSoup
 
-url = 'https://nitter.net/bescomofficial'
-headers = {'User-Agent': 'Mozilla/5.0'}
-res = requests.get(url, headers=headers)
+mirrors = [
+    'https://nitter.privacydev.net',
+    'https://nitter.poast.org',
+    'https://nitter.pufe.org',
+    'https://nitter.1d4.us',
+    'https://nitter.unixfox.eu'
+]
 
-if res.status_code != 200:
-    print("Failed to fetch from Nitter")
-    exit(1)
-
-soup = BeautifulSoup(res.text, 'html.parser')
 tweets = []
+headers = {'User-Agent': 'Mozilla/5.0'}
 
-for item in soup.select('.timeline-item')[:10]:  # Get top 10 tweets
-    content = item.select_one('.tweet-content').text.strip()
-    time_tag = item.select_one('a.tweet-date')
-    tweet_url = 'https://nitter.net' + time_tag['href'] if time_tag else ''
-    date = time_tag['title'] if time_tag and 'title' in time_tag.attrs else ''
-    
-    tweets.append({
-        'content': content,
-        'date': date,
-        'url': tweet_url
-    })
+for mirror in mirrors:
+    try:
+        url = f'{mirror}/bescomofficial'
+        print(f"Trying {url}")
+        res = requests.get(url, headers=headers, timeout=10)
+
+        if res.status_code != 200:
+            print(f"⚠️ {mirror} returned status {res.status_code}")
+            continue
+
+        soup = BeautifulSoup(res.text, 'html.parser')
+        items = soup.select('.timeline-item')
+
+        if not items:
+            print(f"⚠️ No tweets found at {mirror}")
+            continue
+
+        for item in items[:10]:
+            content_elem = item.select_one('.tweet-content')
+            date_elem = item.select_one('a.tweet-date')
+
+            content = content_elem.text.strip() if content_elem else ''
+            date = date_elem['title'] if date_elem and 'title' in date_elem.attrs else ''
+            tweet_url = mirror + date_elem['href'] if date_elem and 'href' in date_elem.attrs else ''
+
+            tweets.append({
+                'content': content,
+                'date': date,
+                'url': tweet_url
+            })
+
+        if tweets:
+            print(f"✅ Successfully scraped from {mirror}")
+            break  # stop trying once one mirror works
+
+    except Exception as e:
+        print(f"❌ Failed on {mirror}: {str(e)}")
+
+if not tweets:
+    print("❌ All mirrors failed. Exiting.")
+    exit(1)
 
 with open('tweets.json', 'w') as f:
     json.dump(tweets, f, indent=2)
 
-print(f"✅ Scraped {len(tweets)} tweets from Nitter")
+print(f"✅ Saved {len(tweets)} tweets to tweets.json")
