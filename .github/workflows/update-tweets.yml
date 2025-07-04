@@ -30,5 +30,3 @@ jobs:
           git add tweets.json
           git diff --cached --quiet || git commit -m "Update tweets"
           git push
-
-Add GitHub Action to auto-fetch tweets
