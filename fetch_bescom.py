@@ -1,33 +1,31 @@
 import json
-import subprocess
+import requests
+from bs4 import BeautifulSoup
 
-username = 'bescomofficial'
-cmd = ['snscrape', '--jsonl', '--max-results', '10', 'twitter-user', username]
-result = subprocess.run(cmd, capture_output=True, text=True)
+url = 'https://nitter.net/bescomofficial'
+headers = {'User-Agent': 'Mozilla/5.0'}
+res = requests.get(url, headers=headers)
 
-# Check if snscrape ran successfully
-if result.returncode != 0:
-    print("snscrape failed:", result.stderr)
+if res.status_code != 200:
+    print("Failed to fetch from Nitter")
     exit(1)
 
-lines = result.stdout.strip().split('\n')
+soup = BeautifulSoup(res.text, 'html.parser')
 tweets = []
 
-for line in lines:
-    if not line.strip():
-        continue
-    try:
-        tweet = json.loads(line)
-        tweets.append({
-            'date': tweet['date'],
-            'content': tweet['content'],
-            'url': tweet['url']
-        })
-    except json.JSONDecodeError:
-        print("❌ Failed to parse line:", line)
-        continue
+for item in soup.select('.timeline-item')[:10]:  # Get top 10 tweets
+    content = item.select_one('.tweet-content').text.strip()
+    time_tag = item.select_one('a.tweet-date')
+    tweet_url = 'https://nitter.net' + time_tag['href'] if time_tag else ''
+    date = time_tag['title'] if time_tag and 'title' in time_tag.attrs else ''
+    
+    tweets.append({
+        'content': content,
+        'date': date,
+        'url': tweet_url
+    })
 
 with open('tweets.json', 'w') as f:
     json.dump(tweets, f, indent=2)
 
-print(f"✅ Scraped {len(tweets)} tweets")
+print(f"✅ Scraped {len(tweets)} tweets from Nitter")
